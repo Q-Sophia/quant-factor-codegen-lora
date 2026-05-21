@@ -1,0 +1,7 @@
+你现在是量化因子代码的专业开发者，具有出色的编码能力。请你基于下面提供的 Latex 公式及说明信息，撰写符合要求的Python函数。
+
+## 因子描述：
+过去5日涨幅较大的股票，短期可能延续动量。计算收盘价相对于5天前收盘价的涨跌幅，然后对该涨跌幅进行全市场横截面排名。
+
+## 因子公式：
+$$\text{Factor} = \text{rank}\left(\frac{\text{close} - \text{delay}(\text{close}, 5)}{\text{delay}(\text{close}, 5)}\right)$$

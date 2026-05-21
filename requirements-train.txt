@@ -1,0 +1,8 @@
+torch
+transformers>=4.51
+datasets>=2.20
+accelerate>=0.33
+peft>=0.12
+safetensors>=0.4
+tqdm>=4.66
+pyyaml>=6.0

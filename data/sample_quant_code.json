@@ -1,0 +1,12 @@
+[
+  {
+    "instruction": "你现在是量化因子代码的专业开发者，请根据因子描述和公式生成 Pandas 因子函数。",
+    "input": "因子描述：过去5日涨幅较大的股票可能延续短期动量。\n量化因子公式：rank((close - delay(close, 5)) / delay(close, 5))",
+    "output": "```python\nimport pandas as pd\nimport numpy as np\n\ndef factor(df: pd.DataFrame) -> pd.Series:\n    delay_close = df['close'].shift(5)\n    raw = (df['close'] - delay_close) / delay_close.clip(lower=1e-6)\n    df['_tmp_factor'] = raw\n    result = df.groupby('date')['_tmp_factor'].rank(pct=True, method='first')\n    df.drop(columns=['_tmp_factor'], inplace=True)\n    return result\n```"
+  },
+  {
+    "instruction": "你现在是量化因子代码的专业开发者，请根据因子描述和公式生成 Pandas 因子函数。",
+    "input": "因子描述：低波动率股票往往具有更稳定的收益。\n量化因子公式：rank(-stddev((close - delay(close, 1)) / delay(close, 1), 20))",
+    "output": "```python\nimport pandas as pd\nimport numpy as np\n\ndef factor(df: pd.DataFrame) -> pd.Series:\n    delay_close = df['close'].shift(1)\n    ret = (df['close'] - delay_close) / delay_close.clip(lower=1e-6)\n    vol = ret.rolling(20, min_periods=16).std()\n    df['_tmp_factor'] = -vol\n    result = df.groupby('date')['_tmp_factor'].rank(pct=True, method='first')\n    df.drop(columns=['_tmp_factor'], inplace=True)\n    return result\n```"
+  }
+]

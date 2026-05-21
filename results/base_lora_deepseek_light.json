@@ -1,0 +1,243 @@
+{
+  "eval_mode": "light_prompt",
+  "models": {
+    "qwen_base": "Qwen/Qwen3-4B-Instruct-2507",
+    "qwen_lora_adapter": "outputs/qwen3-4b-quant-lora",
+    "deepseek_r1_api": "deepseek-reasoner"
+  },
+  "deepseek_base_url": "https://api.deepseek.com",
+  "summaries": {
+    "qwen_base": {
+      "total": 3,
+      "syntax_pass_rate": 0.6667,
+      "signature_pass_rate": 0.0,
+      "pandas_import_rate": 0.6667,
+      "numpy_import_rate": 0.6667,
+      "execution_pass_rate": 0.0,
+      "series_return_rate": 0.0,
+      "finite_value_rate": 0.0,
+      "error_count": 3,
+      "top_errors": [
+        {
+          "error": "ValueError: factor is not callable",
+          "count": 2
+        },
+        {
+          "error": "SyntaxError: invalid character '。' (U+3002) (<unknown>, line 1)",
+          "count": 1
+        }
+      ]
+    },
+    "qwen_lora": {
+      "total": 3,
+      "syntax_pass_rate": 1.0,
+      "signature_pass_rate": 1.0,
+      "pandas_import_rate": 1.0,
+      "numpy_import_rate": 1.0,
+      "execution_pass_rate": 1.0,
+      "series_return_rate": 1.0,
+      "finite_value_rate": 1.0,
+      "error_count": 0,
+      "top_errors": []
+    },
+    "deepseek_r1_api": {
+      "total": 3,
+      "syntax_pass_rate": 1.0,
+      "signature_pass_rate": 0.0,
+      "pandas_import_rate": 1.0,
+      "numpy_import_rate": 1.0,
+      "execution_pass_rate": 0.0,
+      "series_return_rate": 0.0,
+      "finite_value_rate": 0.0,
+      "error_count": 3,
+      "top_errors": [
+        {
+          "error": "ValueError: factor is not callable",
+          "count": 3
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "momentum_5d",
+      "title": "测试 1: 简单动量因子",
+      "prompt": "你现在是量化因子代码的专业开发者，具有出色的编码能力。请你基于下面提供的 Latex 公式及说明信息，撰写符合要求的Python函数。\n\n## 因子描述:\n- 基础洞察: 过去5日涨幅较大的股票，短期可能延续动量。\n- 因子详细描述: 计算收盘价相对于5天前收盘价的涨跌幅，然后对该涨跌幅进行全市场横截面排名。\n\n## 量化因子公式:\n$$\\text{Factor} = \\text{rank}\\left( \\frac{\\text{close} - \\text{delay}(\\text{close}, 5)}{\\text{delay}(\\text{close}, 5)} \\right)$$",
+      "base_output": "当然可以。以下是根据你提供的 **Latex 公式** 和 **因子描述**，撰写的符合量化因子逻辑的 **Python 函数**，适用于在如 `pandas`、`vectorbt` 或 `backtrader` 等量化框架中使用，尤其适配于 **股票行情数据（如收盘价）的横截面排名因子**。\n\n---\n\n### ✅ Python 函数：`calculate_momentum_rank_factor`\n\n```python\nimport pandas as pd\nimport numpy as np\n\ndef calculate_momentum_rank_factor(close: pd.Series, window: int = 5) -> pd.Series:\n    \"\"\"\n    计算基于过去5日收盘价涨跌幅的横截面排名因子（动量因子）。\n\n    参数:\n        close (pd.Series): 股票的收盘价序列，索引为日期，按时间排序。\n        window (int): 计算涨跌幅的天数，默认为5。\n\n    返回:\n        pd.Series: 每只股票的涨跌幅在全市场横截面中的排名（1为最差，n为最好）。\n                   排名从1开始，即最大涨跌幅对应排名1（或根据需求可调整为0-based）。\n\n    公式:\n        Factor = rank( (close - delay(close, 5)) / delay(close, 5) )\n    \"\"\"\n    # 确保 close 是按时间排序的\n    if close.is_monotonic_increasing is False:\n        close = close.sort_index()\n\n    # 计算5天前的收盘价（延迟5天）\n    close_delayed = close.shift(window)\n\n    # 防止除以0（当延迟价格为0时）\n    close_delayed = np.where(close_delayed == 0, np.nan, close_delayed)\n\n    # 计算涨跌幅\n    price_return = (close - close_delayed) / close_delayed\n\n    # 填充 NaN（如价格为0或延迟值为0）\n    price_return = np.where(np.isnan(price_return), 0, price_return)\n\n    # 对涨跌幅进行全市场横截面排名（从1到n，n为股票数量）\n    # 使用 pandas 的 rank，ascending=False 表示涨幅越大排名越靠前（即最大值为1）\n    factor_rank = price_return.rank(method='first', ascending=False)\n\n    # 保留原始索引\n    factor_rank = factor_rank.astype('float64')\n\n    return factor_rank\n```\n\n---\n\n### 🔍 使用说明与注意事项：\n\n1. **输入要求**：\n   - `close` 必须是 `pd.Series`，索引为日期（时间序列）。\n   - 每个股票的收盘价应按时间顺序排列，且长度足够（至少 `window + 1` 天）。\n\n2. **输出解释**：\n   - 值范围：`[1, n]`，其中 `n` 是股票数量。\n   - 值越大，表示该股票过去5日涨幅越大，动量越强。\n   - 排名是**横截面排名**，即在全市场中按涨跌幅排序。\n\n3. **边界处理**：\n   - 若5天前价格为0，则涨跌幅为 `NaN`，函数将其设为0（避免异常）。\n   - 使用 `rank(method='first')` 保证相同涨跌幅的股票获得相同排名。\n\n4. **可选扩展**：\n   - 若需归一化（如转为0~1区间），可进一步处理：\n     ```python\n     factor_rank = (",
+      "lora_output": "```python\nimport pandas as pd\nimport numpy as np\n\ndef factor(df: pd.DataFrame) -> pd.Series:\n    # 计算5天前的收盘价\n    delay_close_5 = df['close'].shift(5)\n    # 计算收盘价相对于5天前的涨跌幅\n    diff_close = df['close'] - delay_close_5\n    # 计算涨跌幅的百分比（分母防零处理）\n    ratio = diff_close / delay_close_5.clip(lower=1e-6)\n    # 将中间结果存入临时列，用于横截面排名\n    df['_temp_ratio'] = ratio\n    # 全市场横截面排名\n    factor_series = df.groupby('date')['_temp_ratio'].rank(pct=True, method='first')\n    # 清理临时列\n    df.drop('_temp_ratio', axis=1, inplace=True)\n    return factor_series\n```",
+      "deepseek_output": "以下是基于您提供的公式及描述，使用 Python 编写的量化因子计算函数。该函数采用宽格式（日期为行、股票为列）的收盘价 DataFrame 作为输入，输出横截面排名的因子值。\n\n```python\nimport pandas as pd\nimport numpy as np\n\ndef calc_momentum_factor(close: pd.DataFrame, lookback: int = 5) -> pd.DataFrame:\n    \"\"\"\n    计算过去 lookback 日涨幅的横截面排名因子。\n\n    因子定义：\n        Factor = rank( (close - delay(close, lookback)) / delay(close, lookback) )\n\n    其中 rank 是对每个日期（横截面）上的所有股票进行排名（升序，排名越大的股票涨幅越高）。\n\n    Parameters\n    ----------\n    close : pd.DataFrame\n        收盘价数据，索引为日期（已按时间升序），列为股票代码，值为收盘价。\n    lookback : int, default 5\n        回溯天数（即计算多日前的收盘价）。\n\n    Returns\n    -------\n    pd.DataFrame\n        与输入相同形状的因子值 DataFrame，每个日期-股票的值为该日该股票的横截面排名（整数），\n        缺失值（如历史数据不足）保持为 NaN。\n    \"\"\"\n    # 确保索引为 datetime 且已排序\n    if not isinstance(close.index, pd.DatetimeIndex):\n        close = close.copy()\n        close.index = pd.to_datetime(close.index)\n    close = close.sort_index()\n\n    # 计算 lookback 个交易日前的收盘价\n    delay_close = close.shift(lookback)\n\n    # 计算涨幅（百分比变化）\n    momentum = (close - delay_close) / delay_close\n\n    # 按日期（行）进行横截面排名，保留 NaN\n    # 注意：rank(axis=1) 对每行的列做排序，method='average' 处理并列情况\n    factor = momentum.rank(axis=1, method='average', na_option='keep')\n\n    return factor\n```\n\n### 使用示例\n```python\n# 假设 close_df 是一个包含了多只股票日收盘价的 DataFrame\n# 行索引为日期，列名为股票代码\nfactor_df = calc_momentum_factor(close_df, lookback=5)\n\n# 查看结果（前几行）\nprint(factor_df.head())\n```\n\n### 注意事项\n- 输入数据的索引应为日期且按时间升序排列，函数内部会进行排序保障。\n- 默认使用平均排名（`method='average'`），即并列股票取相同平均排名数。\n- 如果某只股票因上市不足 `lookback` 天导致前值缺失，则对应日期因子值为 `NaN`。",
+      "base_eval": {
+        "syntax_ok": true,
+        "has_factor_function": false,
+        "imports_pandas": true,
+        "imports_numpy": true,
+        "execution_ok": false,
+        "returns_series": false,
+        "finite_values": false,
+        "error": "ValueError: factor is not callable"
+      },
+      "lora_eval": {
+        "syntax_ok": true,
+        "has_factor_function": true,
+        "imports_pandas": true,
+        "imports_numpy": true,
+        "execution_ok": true,
+        "returns_series": true,
+        "finite_values": true,
+        "error": null
+      },
+      "deepseek_eval": {
+        "syntax_ok": true,
+        "has_factor_function": false,
+        "imports_pandas": true,
+        "imports_numpy": true,
+        "execution_ok": false,
+        "returns_series": false,
+        "finite_values": false,
+        "error": "ValueError: factor is not callable"
+      },
+      "deepseek_usage": {
+        "completion_tokens": 1802,
+        "prompt_tokens": 142,
+        "total_tokens": 1944,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1226,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 128
+        },
+        "prompt_cache_hit_tokens": 128,
+        "prompt_cache_miss_tokens": 14
+      },
+      "deepseek_meta": {
+        "finish_reason": "stop",
+        "content_chars": 1516,
+        "reasoning_content_chars": 2436
+      }
+    },
+    {
+      "id": "volume_price_20d",
+      "title": "测试 2: 复合量价因子",
+      "prompt": "你现在是量化因子代码的专业开发者，具有出色的编码能力。请你基于下面提供的 Latex 公式及说明信息，撰写符合要求的Python函数。\n\n## 因子描述:\n- 基础洞察: 放量上涨的股票可能具有更强的上涨动力。\n- 因子详细描述: 计算成交量相对于20日均量的比值，乘以5日最高价与收盘价差值相对于5日最高价变化的比值，然后进行横截面排名。\n\n## 量化因子公式:\n$$\\text{Factor} = \\text{rank}\\left( \\frac{\\text{volume}}{\\text{mean}(\\text{volume},20)} \\times \\frac{\\text{delta}(\\text{high},5) - \\text{close}}{\\text{delta}(\\text{high},5)} \\right)$$",
+      "base_output": "当然可以。以下是根据你提供的 **Latex 公式** 和 **因子描述**，撰写的符合量化因子逻辑的 **Python 函数**，适用于金融数据（如股票日频数据）的回测框架，例如使用 `pandas` 和 `numpy` 实现。\n\n---\n\n### ✅ 因子名称：放量上涨因子（Volume & Price Momentum Factor）\n\n---\n\n### 📌 公式解析：\n$$\n\\text{Factor} = \\text{rank}\\left( \\frac{\\text{volume}}{\\text{mean}(\\text{volume},20)} \\times \\frac{\\text{delta}(\\text{high},5) - \\text{close}}{\\text{delta}(\\text{high},5)} \\right)\n$$\n\n- `volume / mean(volume, 20)`：成交量相对于20日均量的比值（放量）\n- `delta(high, 5)`：5日最高价的**变化量**，即 `high_5 - high_0`（即5日最高价与前5日最高价的差值）\n- `(delta(high,5) - close) / delta(high,5)`：5日最高价与收盘价的差值占最高价变化的比例，反映“是否接近高点”或“是否放量上涨”\n- 最后进行**横截面排名**（rank），值域为 1 到 N（N 为股票数量）\n\n> ⚠️ 注意：`delta(high,5)` 应理解为 **5日最高价的变动**，即 `high_t - high_{t-5}`，表示5日内的价格波动。  \n> 但更合理的解释是：**5日最高价与前5日最高价的差值**，即 `high_t - high_{t-5}`，表示近期是否突破了5日高点。\n\n---\n\n### ✅ Python 实现（适用于 pandas DataFrame）\n\n```python\nimport pandas as pd\nimport numpy as np\n\ndef calculate_volume_price_momentum_factor(data: pd.DataFrame) -> pd.Series:\n    \"\"\"\n    计算放量上涨因子（Volume & Price Momentum Factor）\n    \n    参数:\n        data (pd.DataFrame): DataFrame，包含以下列：\n            - 'close': 收盘价\n            - 'high': 最高价\n            - 'volume': 成交量\n    \n    返回:\n        pd.Series: 每只股票的因子值，横截面排名（1 到 N）\n    \"\"\"\n    # 确保数据按日期排序（按时间降序）\n    data = data.sort_index(ascending=False)\n    \n    # 1. 计算20日成交量均值（滚动均值）\n    data['volume_20_mean'] = data['volume'].rolling(window=20, min_periods=1).mean()\n    \n    # 2. 计算5日最高价的变动（high_t - high_{t-5}）\n    # 注意：这里我们计算的是5日最高价的“变化量”，即当前最高价与5日前最高价的差值\n    data['high_delta_5'] = data['high'].shift(5)  # 5日前的最高价\n    data['high_delta_5'] = data['high'] - data['high_delta_5']  # 5日最高价变化量\n    \n    # 3. 计算 (high_delta_5 - close) / high_delta_5\n    # 注意：如果 high_delta_5 == 0，避免除零错误\n    data['price_momentum_ratio'] = (",
+      "lora_output": "```python\nimport pandas as pd\nimport numpy as np\n\ndef factor(df: pd.DataFrame) -> pd.Series:\n    # 计算20日成交量均值\n    df['temp_mean_volume_20'] = df['volume'].rolling(20, min_periods=max(1, int(20 * 0.8))).mean()\n    # 计算成交量与20日均值的比值\n    df['temp_ratio1'] = df['volume'] / df['temp_mean_volume_20'].clip(lower=1e-6)\n    # 计算5日最高价变化量\n    df['temp_delta_high_5'] = df['high'].diff(5)\n    # 计算分子：5日最高价变化量 - 收盘价\n    df['temp_numerator'] = df['temp_delta_high_5'] - df['close']\n    # 计算分母：5日最高价变化量\n    df['temp_ratio2'] = df['temp_numerator'] / df['temp_delta_high_5'].clip(lower=1e-6)\n    # 计算两个比值的乘积\n    df['temp_product'] = df['temp_ratio1'] * df['temp_ratio2']\n    # 横截面排名\n    factor_series = df.groupby('date')['temp_product'].rank(pct=True, method='first')\n    return factor_series\n```",
+      "deepseek_output": "以下是根据给定公式编写的因子计算函数，严格实现了横截面排名逻辑，并处理了分母为零等边界情况。\n\n```python\nimport pandas as pd\nimport numpy as np\n\ndef volume_high_close_factor(data: pd.DataFrame,\n                             volume_col: str = 'volume',\n                             high_col: str = 'high',\n                             close_col: str = 'close',\n                             vol_window: int = 20,\n                             high_window: int = 5,\n                             rank_pct: bool = True) -> pd.Series:\n    \"\"\"\n    计算成交量与最高价复合因子，并返回横截面排名结果。\n\n    因子公式（Latex）:\n    Factor = rank( (volume / mean(volume, 20)) * (delta(high, 5) - close) / delta(high, 5) )\n\n    参数\n    ----------\n    data : pd.DataFrame\n        包含成交量、最高价、收盘价的多重索引 DataFrame，索引为 (日期, 股票)。\n    volume_col : str, default='volume'\n        成交量列名。\n    high_col : str, default='high'\n        最高价列名。\n    close_col : str, default='close'\n        收盘价列名。\n    vol_window : int, default=20\n        成交量滚动均值窗口。\n    high_window : int, default=5\n        最高价差分窗口。\n    rank_pct : bool, default=True\n        是否返回百分位排名（0~1）；若 False 则返回顺序排名（1~N）。\n\n    返回\n    -------\n    pd.Series\n        因子排名值，索引与 data 一致。\n    \"\"\"\n    # 保证输入是多层索引 (date, asset)\n    if data.index.nlevels != 2:\n        raise ValueError(\"data 必须具有两层索引 (date, asset)\")\n\n    # 提取需要的原始序列\n    volume = data[volume_col]\n    high = data[high_col]\n    close = data[close_col]\n\n    # ---------- 计算第一个分量 ----------\n    # 20日均成交量（包含当天）\n    vol_ma20 = volume.groupby(level=1, group_keys=False).rolling(vol_window, min_periods=1).mean()\n    vol_ma20 = vol_ma20.droplevel(0)  # 调整索引对齐\n\n    # 成交量比值\n    vol_ratio = volume / vol_ma20\n\n    # ---------- 计算第二个分量 ----------\n    # 5日最高价变化 delta(high, 5) = high - high.shift(5)\n    high_shift5 = high.groupby(level=1).shift(high_window)\n    delta_high = high - high_shift5\n\n    # 分子: delta(high,5) - close\n    numerator = delta_high - close\n\n    # 分母: delta(high,5)\n    denominator = delta_high.copy()\n\n    # 处理分母为零或 NaN 的情况：将整个第二项设为 0（或可替换为其他策略）\n    mask_invalid = (denominator == 0) | denominator.isna()\n    second_term = np.where(mask_invalid, 0, numerator / denominator)\n\n    # ---------- 合并因子原始值 ----------\n    raw_factor = vol_ratio * second_term\n\n    # ---------- 横截面排名 ----------\n    # 按日期分组，对每个截面内的股票进行排名\n    # 使用 rank 方法，percentile=True 得到 0-1 之间的百分位\n    factor_ranked = raw_factor.groupby(level=0).rank(pct=rank_pct, method='average')\n\n    return factor_ranked\n```\n\n### 使用示例\n\n```python\n# 构造测试数据（MultiIndex: date, stock）\ndates = pd.date_range('2023-01-01', periods=50, freq='D')\nstocks = ['A', 'B', 'C']\nidx = pd.MultiIndex.from_product([dates, stocks], names=['date', 'stock'])\nnp.random.seed(42)\ndf = pd.DataFrame({\n    'volume': np.random.randint(1e5, 1e7, 150),\n    'high': 100 + np.random.randn(150).cumsum(),\n    'close': 100 + np.random.randn(150).cumsum()\n}, index=idx)\n\n# 计算因子\nfactor_series = volume_high_close_factor(df)\nprint(factor_series.head(10))\n```\n\n### 关键说明\n\n1. **Delta(high,5)**：严格按公式实现为 `high - high.shift(5)`，即当前最高价与5天前最高价的差值。\n2. **分母为零处理**：当 `delta(high,5) == 0` 时，第二项整体设为0（等价于取极限值为0），避免除零异常。\n3. **排名方式**：使用 `groupby(level=0).rank(pct=True)` 对每个交易日进行横截面百分位排名（0~1），符合“横截面排名”要求。\n4. **多重索引**：函数要求输入 DataFrame 的索引为 `(date, asset)` 两层索引，这是量化研究中的常见组织形式，便于分组操作。",
+      "base_eval": {
+        "syntax_ok": false,
+        "has_factor_function": false,
+        "imports_pandas": false,
+        "imports_numpy": false,
+        "execution_ok": false,
+        "returns_series": false,
+        "finite_values": false,
+        "error": "SyntaxError: invalid character '。' (U+3002) (<unknown>, line 1)"
+      },
+      "lora_eval": {
+        "syntax_ok": true,
+        "has_factor_function": true,
+        "imports_pandas": true,
+        "imports_numpy": true,
+        "execution_ok": true,
+        "returns_series": true,
+        "finite_values": true,
+        "error": null
+      },
+      "deepseek_eval": {
+        "syntax_ok": true,
+        "has_factor_function": false,
+        "imports_pandas": true,
+        "imports_numpy": true,
+        "execution_ok": false,
+        "returns_series": false,
+        "finite_values": false,
+        "error": "ValueError: factor is not callable"
+      },
+      "deepseek_usage": {
+        "completion_tokens": 1969,
+        "prompt_tokens": 166,
+        "total_tokens": 2135,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 856,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 128
+        },
+        "prompt_cache_hit_tokens": 128,
+        "prompt_cache_miss_tokens": 38
+      },
+      "deepseek_meta": {
+        "finish_reason": "stop",
+        "content_chars": 3198,
+        "reasoning_content_chars": 1777
+      }
+    },
+    {
+      "id": "low_volatility_20d",
+      "title": "测试 3: 低波动率因子",
+      "prompt": "你现在是量化因子代码的专业开发者，具有出色的编码能力。请你基于下面提供的 Latex 公式及说明信息，撰写符合要求的Python函数。\n\n## 因子描述:\n- 基础洞察: 低波动率的股票往往具有更稳定的收益。\n- 因子详细描述: 计算过去20日收益率的标准差，取负值后进行横截面排名，使得低波动率的股票获得更高的因子值。\n\n## 量化因子公式:\n$$\\text{Factor} = \\text{rank}\\left( -\\text{stddev}\\left( \\frac{\\text{close} - \\text{delay}(\\text{close},1)}{\\text{delay}(\\text{close},1)}, 20 \\right) \\right)$$",
+      "base_output": "当然可以。以下是根据你提供的 **Latex 公式** 和 **因子描述**，撰写的符合量化因子逻辑的 **Python 函数**，适用于金融数据（如股票收盘价）的回测框架，例如在 `pandas` 和 `ta` 或 `vectorbt` 等库中使用。\n\n---\n\n### ✅ Python 函数：低波动率因子（Low Volatility Factor）\n\n```python\nimport pandas as pd\nimport numpy as np\n\ndef calculate_low_volatility_factor(close: pd.DataFrame) -> pd.Series:\n    \"\"\"\n    计算低波动率因子（Low Volatility Factor）：\n    \n    公式：Factor = rank( -stddev( (close - delay(close,1)) / delay(close,1), 20 ) )\n    \n    参数:\n        close (pd.DataFrame): 形状为 (n_days, n_stocks) 的 DataFrame，每列代表一只股票的收盘价\n    \n    返回:\n        pd.Series: 形状为 (n_days,) 的 Series，每项为对应日期的因子值（横截面排名，范围 1~n_stocks）\n    \n    说明:\n        - 计算过去20个交易日的每日收益率（(close - prev_close) / prev_close）\n        - 求这20日收益率的标准差\n        - 取负值（低波动率股票标准差小，负值后变大）\n        - 对所有股票进行横截面排名（从高到低，1为最差，n为最好）\n        - 排名结果为整数，范围 [1, n_stocks]\n    \"\"\"\n    # 确保 close 是 DataFrame，列是股票，行是时间\n    if close.shape[0] < 20:\n        raise ValueError(\"数据长度不足20天，无法计算20日波动率。\")\n    \n    # 计算每日收益率：(close - close.shift(1)) / close.shift(1)\n    daily_returns = (close - close.shift(1)) / close.shift(1)\n    \n    # 计算过去20日收益率的标准差（滚动窗口）\n    # 使用 .rolling(20) 且 .std()，注意：std() 默认是除以 n-1（样本标准差）\n    # 但因子中通常使用样本标准差，因此保留\n    volatility_std = daily_returns.rolling(window=20, min_periods=1).std()\n    \n    # 取负值：低波动率 → 高因子值\n    negative_volatility = -volatility_std\n    \n    # 横截面排名：对每行（每个时间点）进行排名，从高到低（低波动率股票排名高）\n    # rank() 默认是 1-based，且按升序排列，因此负波动率越大（越接近0），排名越高\n    # 使用 pandas 的 rank，method='min' 保证并列情况处理一致\n    factor_rank = negative_volatility.rank(pct=False, method='min')  # 返回整数排名\n    \n    # 由于 rank() 返回的是 1 到 n 的整数，我们直接返回该 Series\n    # 注意：因子值越大，表示波动率越低（越稳定）\n    \n    return factor_rank\n```\n\n---\n\n### 📌 使用示例（在回测中调用）：\n\n```python\n# 假设你有一个 DataFrame，列是股票代码，行是日期\n# close = pd.DataFrame({\n#     'AAPL': [150, 152, 151, 153,",
+      "lora_output": "```python\nimport pandas as pd\nimport numpy as np\n\ndef factor(df: pd.DataFrame) -> pd.Series:\n    # 计算1天前的收盘价\n    df['temp_delay_close'] = df['close'].shift(1)\n    # 计算日收益率：(当日收盘价 - 1天前收盘价) / 1天前收盘价\n    df['temp_return'] = (df['close'] - df['temp_delay_close']) / df['temp_delay_close'].clip(lower=1e-6)\n    # 计算过去20天收益率的标准差\n    df['temp_stddev'] = df['temp_return'].rolling(20, min_periods=max(1, int(20 * 0.8))).std()\n    # 取标准差的负值\n    df['temp_neg_stddev'] = -df['temp_stddev']\n    # 对负值进行全市场横截面排名\n    factor_series = df.groupby('date')['temp_neg_stddev'].rank(pct=True, method='first')\n    return factor_series\n```",
+      "deepseek_output": "以下是根据您提供的公式和描述，编写的 Python 函数实现。该函数计算“低波因子”，即过去 20 日日收益率的负标准差横截面排名。\n\n```python\nimport pandas as pd\nimport numpy as np\n\ndef low_volatility_factor(df, window=20, rank_method='average', pct=False):\n    \"\"\"\n    计算低波动因子：过去20日日收益率的负标准差，横截面排名。\n    \n    参数:\n    df : pd.DataFrame\n        必须包含 'date', 'stock_code', 'close' 列。\n        date列应为可排序的日期类型（如datetime或字符串）。\n    window : int, default=20\n        计算滚动标准差的窗口期长度。\n    rank_method : str, default='average'\n        pandas中rank方法的参数，控制相同值时的排名方式。\n        可选：'average', 'min', 'max', 'dense', 'first'等。\n    pct : bool, default=False\n        是否返回百分位排名（0~1之间）。\n        若为False，返回从1开始的整数排名序号。\n    \n    返回:\n    pd.DataFrame\n        包含 'date', 'stock_code', 'factor' 三列。\n        factor即为横截面排名值（或百分位数）。\n    \"\"\"\n    # 1. 确保数据按股票代码和日期排序\n    df = df.sort_values(['stock_code', 'date']).reset_index(drop=True)\n    \n    # 2. 计算日收益率 (close / delay(close, 1) - 1)\n    #   使用 groupby 使每个股票独立计算 shift\n    df['ret'] = df.groupby('stock_code')['close'].transform(lambda x: x / x.shift(1) - 1)\n    \n    # 3. 对每个股票计算滚动标准差\n    df['std'] = df.groupby('stock_code')['ret'].transform(\n        lambda x: x.rolling(window=window, min_periods=window).std(ddof=1)\n    )\n    \n    # 4. 取负值\n    df['neg_std'] = -df['std']\n    \n    # 5. 横截面排名：在每个日期对 neg_std 进行排名\n    #   使用 groupby('date') 后 apply rank，设置 na_option='keep' 保留NaN\n    if pct:\n        df['factor'] = df.groupby('date')['neg_std'].rank(\n            method=rank_method, na_option='keep', pct=True\n        )\n    else:\n        df['factor'] = df.groupby('date')['neg_std'].rank(\n            method=rank_method, na_option='keep'\n        )\n    \n    # 6. 选取需要的列并返回\n    result = df[['date', 'stock_code', 'factor']].copy()\n    return result\n```\n\n### 使用示例\n\n```python\n# 假设已有 stock_data 包含 'date', 'stock_code', 'close'\nfactor_df = low_volatility_factor(stock_data, window=20, pct=True)\nprint(factor_df.head())\n```\n\n### 函数说明\n\n- **核心逻辑**：  \n  1. 按股票分组计算每个交易日的收益率。  \n  2. 对每只股票计算过去 `window` 个交易日的收益率标准差（样本标准差，ddof=1）。  \n  3. 取负值，使得低波动股票得到较大的负值（即更接近0的负数）。  \n  4. 在每个横截面（交易日）上对所有股票的负标准差进行排名：  \n     - 若 `pct=False`：返回从 1 开始的整数排名（值越大表示排名越高）。  \n     - 若 `pct=True`：返回 0~1 之间的百分位数（值越大表示排名越高）。  \n\n- **低波动股票获得更高的因子值**：由于取负后低波动股票拥有更大的数值（更小的绝对值），升序排名时它们会得到更大的排名值（或百分位数），符合因子构建目标。\n\n- **缺失值处理**：当收益率序列不足 `window` 个有效值时，`rolling.std` 会返回 NaN，排名时 `na_option='keep'` 保留 NaN，不对其排名。最终因子列中相应位置为 NaN。\n\n- **性能建议**：若数据量较大，可考虑使用 `numba` 或 `cython` 优化循环部分，但本实现已利用 pandas 向量化操作，对一般规模的数据（几十万行）运行效率尚可。\n\n如果您有额外需求（如自定义标准差类型、排名方向等），可在函数参数中扩展。",
+      "base_eval": {
+        "syntax_ok": true,
+        "has_factor_function": false,
+        "imports_pandas": true,
+        "imports_numpy": true,
+        "execution_ok": false,
+        "returns_series": false,
+        "finite_values": false,
+        "error": "ValueError: factor is not callable"
+      },
+      "lora_eval": {
+        "syntax_ok": true,
+        "has_factor_function": true,
+        "imports_pandas": true,
+        "imports_numpy": true,
+        "execution_ok": true,
+        "returns_series": true,
+        "finite_values": true,
+        "error": null
+      },
+      "deepseek_eval": {
+        "syntax_ok": true,
+        "has_factor_function": false,
+        "imports_pandas": true,
+        "imports_numpy": true,
+        "execution_ok": false,
+        "returns_series": false,
+        "finite_values": false,
+        "error": "ValueError: factor is not callable"
+      },
+      "deepseek_usage": {
+        "completion_tokens": 2307,
+        "prompt_tokens": 154,
+        "total_tokens": 2461,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1316,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 128
+        },
+        "prompt_cache_hit_tokens": 128,
+        "prompt_cache_miss_tokens": 26
+      },
+      "deepseek_meta": {
+        "finish_reason": "stop",
+        "content_chars": 2473,
+        "reasoning_content_chars": 2505
+      }
+    }
+  ]
+}

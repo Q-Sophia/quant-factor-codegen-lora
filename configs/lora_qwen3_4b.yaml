@@ -1,0 +1,37 @@
+# LoRA SFT config for Qwen3-4B financial factor code generation.
+# This configuration is intended for a single RTX 4090 24GB or larger GPU.
+model_name_or_path: "Qwen/Qwen3-4B-Instruct-2507"
+train_file: "data/processed/train.jsonl"
+val_file: "data/processed/val.jsonl"
+output_dir: "outputs/qwen3-4b-quant-lora"
+
+# 0 means no explicit truncation in scripts/train_lora_local.py.
+max_length: 0
+num_train_epochs: 3
+per_device_train_batch_size: 1
+per_device_eval_batch_size: 1
+gradient_accumulation_steps: 16
+
+learning_rate: 0.0001
+warmup_ratio: 0.03
+logging_steps: 10
+eval_steps: 50
+save_steps: 100
+optim: adamw_torch
+
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.05
+target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+fp16: true
+bf16: false
+gradient_checkpointing: true
+trust_remote_code: false

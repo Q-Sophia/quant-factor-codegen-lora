@@ -1,0 +1,41 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.idea/
+
+# Local secrets
+.env
+*.key
+*.pem
+
+# Generated model artifacts
+models/
+checkpoints/
+outputs/
+qwen3-lora/
+*.safetensors
+*.bin
+*.pt
+*.pth
+wandb/
+swanlog/
+logs/
+
+# Data files derived from non-public or large source datasets.
+data/quant_code.json
+data/processed/*.jsonl
+
+# Local notebooks and scratch outputs.
+notebooks/
+results/out*.txt
+results/base_vs_lora_outputs*.json
+results/deepseek_reasoner*.json
+results/reference_eval_metrics.json
+results/*strict*.json
+results/.ipynb_checkpoints/
+
+# Keep reports versioned if they are small and useful.
