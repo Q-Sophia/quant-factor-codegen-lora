@@ -7,7 +7,7 @@ def factor(df: pd.DataFrame) -> pd.Series:
     ...
 ```
 
-项目提供可复现的本地/云端 LoRA 微调流程，包含 SFT 数据处理、LoRA 训练、loss 曲线可视化，以及 base/LoRA/DeepSeek-R1 API 三方对比评估。
+项目提供本地/云端 LoRA 微调代码流程、训练配置、样例数据、loss 曲线可视化，以及 base/LoRA/DeepSeek-R1 API 三方对比评估记录，重点展示训练管线和实验方法。
 
 ## 项目定位
 
@@ -109,6 +109,14 @@ configs/lora_qwen3_4b.yaml
 Loss 曲线：
 
 ![loss curve](results/loss_curve.png)
+
+## LoRA 权重
+
+为了便于推理复现，训练后的 LoRA adapter 已发布至 Hugging Face：
+
+- [Q-Sophia/qwen3-4b-quant-lora](https://huggingface.co/Q-Sophia/qwen3-4b-quant-lora)
+
+该仓库只包含 PEFT LoRA adapter，不包含完整基座模型。推理时仍需加载 `Qwen/Qwen3-4B-Instruct-2507` 作为 base model。
 
 ## 评估设计
 
@@ -227,7 +235,7 @@ quant/
   requirements-train.txt
 ```
 
-## 快速开始
+## 使用方式
 
 基础环境：
 
@@ -235,13 +243,24 @@ quant/
 pip install -r requirements.txt
 ```
 
-准备 SFT 数据：
+使用已发布的 LoRA adapter 进行推理，需要安装训练/推理依赖：
+
+```bash
+pip install -r requirements-train.txt
+
+python scripts/generate_with_lora.py \
+  --base-model Qwen/Qwen3-4B-Instruct-2507 \
+  --adapter Q-Sophia/qwen3-4b-quant-lora \
+  --prompt-file examples/prompt.txt
+```
+
+仓库默认提供样例数据和实验记录。若需要重新训练，请准备同格式 SFT 数据，并保存为 `data/quant_code.json`，再生成训练/验证集：
 
 ```bash
 python scripts/prepare_sft_dataset.py
 ```
 
-训练 LoRA：
+训练 LoRA 需要本地或云端 GPU 环境，以及可访问的 `Qwen3-4B-Instruct-2507` 基座模型：
 
 ```bash
 pip install -r requirements-train.txt
@@ -251,7 +270,7 @@ python scripts/train_lora_local.py \
   --model-name-or-path /path/to/Qwen3-4B-Instruct-2507
 ```
 
-生成 loss 曲线：
+训练完成后，可以根据输出目录中的 `log_history.json` 生成 loss 曲线：
 
 ```bash
 python scripts/plot_loss_curve.py \
@@ -259,12 +278,12 @@ python scripts/plot_loss_curve.py \
   --output results/loss_curve.png
 ```
 
-运行三方对比评估：
+如需重新运行三方对比评估，需要准备基座模型、LoRA adapter 和 DeepSeek API key：
 
 ```bash
 python scripts/compare_base_lora_deepseek.py \
-  --base-model /path/to/Qwen3-4B-Instruct-2507 \
-  --adapter /path/to/qwen3-4b-quant-lora \
+  --base-model Qwen/Qwen3-4B-Instruct-2507 \
+  --adapter Q-Sophia/qwen3-4b-quant-lora \
   --deepseek-model deepseek-reasoner \
   --eval-cases examples/eval_cases.jsonl \
   --output results/base_lora_deepseek_light.json

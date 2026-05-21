@@ -22,9 +22,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-model", default="Qwen/Qwen3-4B-Instruct-2507")
     parser.add_argument(
         "--adapter",
-        type=Path,
-        default=Path("outputs/qwen3-4b-quant-lora"),
-        help="Path to the trained LoRA adapter.",
+        default="outputs/qwen3-4b-quant-lora",
+        help="Local adapter directory or Hugging Face repo id.",
     )
     parser.add_argument(
         "--deepseek-model",

@@ -7,7 +7,7 @@ from pathlib import Path
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate factor code with a local LoRA adapter.")
     parser.add_argument("--base-model", default="Qwen/Qwen3-4B-Instruct-2507")
-    parser.add_argument("--adapter", type=Path, required=True)
+    parser.add_argument("--adapter", required=True, help="Local adapter directory or Hugging Face repo id.")
     parser.add_argument("--prompt-file", type=Path, required=True)
     parser.add_argument("--max-new-tokens", type=int, default=768)
     parser.add_argument("--temperature", type=float, default=0.0)
