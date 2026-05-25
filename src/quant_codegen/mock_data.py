@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 
-def make_mock_ohlcv_frame(num_dates: int = 40, num_assets: int = 6):
+def make_mock_ohlcv_frame(
+    num_dates: int = 40,
+    num_assets: int = 6,
+    seed: int = 42,
+):
     """Create a small OHLCV panel for executing generated factor functions."""
     import numpy as np
     import pandas as pd
 
-    rng = np.random.default_rng(42)
+    rng = np.random.default_rng(seed)
     dates = pd.date_range("2024-01-01", periods=num_dates, freq="B")
     symbols = [f"S{i:03d}" for i in range(num_assets)]
 
@@ -26,6 +30,7 @@ def make_mock_ohlcv_frame(num_dates: int = 40, num_assets: int = 6):
                 {
                     "date": date,
                     "symbol": symbol,
+                    "code": symbol,
                     "open": float(open_[i]),
                     "high": float(high[i]),
                     "low": float(low[i]),
@@ -37,3 +42,12 @@ def make_mock_ohlcv_frame(num_dates: int = 40, num_assets: int = 6):
 
     df = pd.DataFrame(rows)
     return df.sort_values(["symbol", "date"]).reset_index(drop=True)
+
+
+def make_evaluation_panels():
+    """Create deterministic panels long enough for rolling-window factor checks."""
+    return [
+        make_mock_ohlcv_frame(num_dates=320, num_assets=6, seed=42),
+        make_mock_ohlcv_frame(num_dates=280, num_assets=5, seed=7),
+        make_mock_ohlcv_frame(num_dates=360, num_assets=4, seed=2026),
+    ]

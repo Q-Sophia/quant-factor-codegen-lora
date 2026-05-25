@@ -28,13 +28,17 @@ logs/
 # Data files derived from non-public or large source datasets.
 data/quant_code.json
 data/processed/*.jsonl
+data/processed*/
 
 # Local notebooks and scratch outputs.
 notebooks/
 results/out*.txt
 results/base_vs_lora_outputs*.json
+results/example_outputs*.json
 results/deepseek_reasoner*.json
 results/reference_eval_metrics.json
+results/lora_test*.json
+results/deepseek_test*.json
 results/*strict*.json
 results/.ipynb_checkpoints/
 
